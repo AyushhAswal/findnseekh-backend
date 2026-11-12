@@ -43,6 +43,7 @@ class TestTeacherProfile:
             "/api/v1/profile/teacher/me",
             json={
                 "bio": "Experienced Python tutor",
+                "qualification": "M.Sc. Computer Science",
                 "experience_years": 5,
                 "city": "Bangalore",
                 "teaching_mode": "online",
@@ -52,6 +53,7 @@ class TestTeacherProfile:
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()["data"]
         assert data["bio"] == "Experienced Python tutor"
+        assert data["qualification"] == "M.Sc. Computer Science"
         assert data["experience_years"] == 5
         assert data["city"] == "Bangalore"
         assert data["teaching_mode"] == "online"

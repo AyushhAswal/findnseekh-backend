@@ -61,6 +61,7 @@ def create_teacher_profile(db: Session, token: str, body: TeacherProfileCreateSc
     profile = TeacherProfileModel(
         user_id=user_id,
         bio=body.bio,
+        qualification=body.qualification,
         experience_years=body.experience_years,
         city=body.city,
         state=body.state,
@@ -170,6 +171,7 @@ def get_teacher_public_profile(db: Session, user_id: int) -> ApiResponse:
         user_id=profile.user_id,
         name=user.name,
         bio=profile.bio,
+        qualification=profile.qualification,
         experience_years=profile.experience_years,
         city=profile.city,
         state=profile.state,

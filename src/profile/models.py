@@ -13,6 +13,7 @@ class TeacherProfileModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_table.id"), nullable=False, unique=True, index=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    qualification: Mapped[str | None] = mapped_column(String(150), nullable=True)
     experience_years: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
