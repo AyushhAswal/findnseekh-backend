@@ -44,6 +44,7 @@ class TestTeacherProfile:
             json={
                 "bio": "Experienced Python tutor",
                 "qualification": "M.Sc. Computer Science",
+                "skills": ["Python", "Machine Learning", "Mathematics"],
                 "experience_years": 5,
                 "city": "Bangalore",
                 "teaching_mode": "online",
@@ -54,6 +55,7 @@ class TestTeacherProfile:
         data = resp.json()["data"]
         assert data["bio"] == "Experienced Python tutor"
         assert data["qualification"] == "M.Sc. Computer Science"
+        assert data["skills"] == ["Python", "Machine Learning", "Mathematics"]
         assert data["experience_years"] == 5
         assert data["city"] == "Bangalore"
         assert data["teaching_mode"] == "online"
@@ -61,6 +63,13 @@ class TestTeacherProfile:
     def test_get_public_profile(self, client: TestClient):
         token = self._register_and_login(client, "tp3@example.com")
         self._become_teacher(client, token)
+        client.put(
+            "/api/v1/profile/teacher/me",
+            json={
+                "skills": ["Guitar", "Music Theory"],
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
         # Get user_id from /me
         me_resp = client.get(
             "/api/v1/users/me",
@@ -71,6 +80,7 @@ class TestTeacherProfile:
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()["data"]
         assert data["name"] == "Teacher One"
+        assert data["skills"] == ["Guitar", "Music Theory"]
         assert "password_hash" not in data
 
     def test_get_public_profile_not_found(self, client: TestClient):

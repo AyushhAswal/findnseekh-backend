@@ -9,6 +9,7 @@ class TeacherProfileCreateSchema(BaseModel):
 
     bio: Optional[str] = Field(default=None, max_length=1000)
     qualification: Optional[str] = Field(default=None, max_length=150)
+    skills: Optional[list[str]] = Field(default=None)
     experience_years: int = Field(default=0, ge=0)
     city: Optional[str] = Field(default=None, max_length=100)
     state: Optional[str] = Field(default=None, max_length=100)
@@ -28,6 +29,7 @@ class TeacherProfileUpdateSchema(BaseModel):
 
     bio: Optional[str] = Field(default=None, max_length=1000)
     qualification: Optional[str] = Field(default=None, max_length=150)
+    skills: Optional[list[str]] = Field(default=None)
     experience_years: Optional[int] = Field(default=None, ge=0)
     city: Optional[str] = Field(default=None, max_length=100)
     state: Optional[str] = Field(default=None, max_length=100)
@@ -51,6 +53,7 @@ class TeacherProfileReadSchema(BaseModel):
     user_id: int
     bio: Optional[str] = None
     qualification: Optional[str] = None
+    skills: Optional[list[str]] = None
     experience_years: int
     city: Optional[str] = None
     state: Optional[str] = None
@@ -70,6 +73,7 @@ class TeacherPublicProfileSchema(BaseModel):
     name: str
     bio: Optional[str] = None
     qualification: Optional[str] = None
+    skills: Optional[list[str]] = None
     experience_years: int
     city: Optional[str] = None
     state: Optional[str] = None

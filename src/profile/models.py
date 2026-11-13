@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.utils.db import Base
@@ -14,6 +14,7 @@ class TeacherProfileModel(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_table.id"), nullable=False, unique=True, index=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     qualification: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    skills: Mapped[list[str] | None] = mapped_column(JSON, nullable=True, default=list)
     experience_years: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     state: Mapped[str | None] = mapped_column(String(100), nullable=True)
