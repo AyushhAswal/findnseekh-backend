@@ -163,3 +163,23 @@ class SkillListingPublicSchema(BaseModel):
     status: str
 
     model_config = {"from_attributes": True}
+
+
+class PopularSkillSchema(BaseModel):
+    """Schema for popular skill tags."""
+
+    name: str
+    category: str
+    category_slug: str
+    count: int = 0
+
+
+class SkillSuggestionSchema(BaseModel):
+    """Schema for skill autocomplete suggestion."""
+
+    id: Optional[int] = None
+    name: str
+    type: str  # "skill" or "category"
+    category_id: Optional[int] = None
+    category_slug: Optional[str] = None
+    category_name: Optional[str] = None

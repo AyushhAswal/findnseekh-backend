@@ -69,6 +69,9 @@ def override_get_db():
 # ---------------------------------------------------------------------------
 test_app = FastAPI(title="FindNSeekh Test API", version="1.0.0")
 
+from src.utils.etag import ETagMiddleware  # noqa: E402
+test_app.add_middleware(ETagMiddleware)
+
 api_v1_router = APIRouter(prefix="/api/v1")
 
 
@@ -88,12 +91,18 @@ from src.profile import routers as profile_routers  # noqa: E402
 from src.category import routers as category_routers  # noqa: E402
 from src.skills import routers as skills_routers  # noqa: E402
 from src.requests import routers as request_routers  # noqa: E402
+from src.teachers import routers as teacher_routers  # noqa: E402
+from src.locations import routers as location_routers  # noqa: E402
+from src.home import routers as home_routers  # noqa: E402
 
 api_v1_router.include_router(user_routers.user_routes)
 api_v1_router.include_router(profile_routers.profile_routes)
 api_v1_router.include_router(category_routers.category_routes)
 api_v1_router.include_router(skills_routers.skills_routes)
 api_v1_router.include_router(request_routers.request_routes)
+api_v1_router.include_router(teacher_routers.teachers_routes)
+api_v1_router.include_router(location_routers.locations_routes)
+api_v1_router.include_router(home_routers.home_routes)
 
 test_app.include_router(api_v1_router)
 test_app.dependency_overrides[get_db] = override_get_db

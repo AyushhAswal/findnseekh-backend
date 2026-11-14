@@ -41,6 +41,25 @@ def list_skills(
 
 # Static routes must come before /{skill_id} to avoid path parameter conflicts
 
+@skills_routes.get("/popular", status_code=status.HTTP_200_OK)
+def get_popular_skills(
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Get popular skills/tags."""
+    return controllers.get_popular_skills(db, limit)
+
+
+@skills_routes.get("/suggestions", status_code=status.HTTP_200_OK)
+def get_skill_suggestions(
+    query: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Get autocomplete suggestions for skills and categories."""
+    return controllers.get_skill_suggestions(db, query, limit)
+
+
 @skills_routes.get("/search", status_code=status.HTTP_200_OK)
 def search_skills(
     query: Optional[str] = Query(None),

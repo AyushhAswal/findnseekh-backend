@@ -8,13 +8,16 @@ from fastapi import HTTPException, status
 from src.category.models import CategoryModel
 from src.roles.models import RoleModel, UserRoleModel
 from src.skills.dtos import (
+    PopularSkillSchema,
     SkillListingCreateSchema,
     SkillListingPublicSchema,
     SkillListingReadSchema,
     SkillListingStatusSchema,
     SkillListingUpdateSchema,
+    SkillSuggestionSchema,
 )
 from src.skills.models import SkillListingModel
+from src.profile.models import TeacherProfileModel
 from src.users.models import UserModel
 from src.utils.auth import require_active_session
 from src.utils.responses import ApiResponse
@@ -486,4 +489,135 @@ def get_category_skills(db: Session, category_id: int) -> ApiResponse:
         status=status.HTTP_200_OK,
         message="Category skills fetched successfully",
         data=data,
+    )
+
+
+CURATED_POPULAR_SKILLS = [
+    {"name": "Guitar", "category": "Music", "category_slug": "music", "count": 28},
+    {"name": "Contemporary Dance", "category": "Dance", "category_slug": "dance", "count": 22},
+    {"name": "Portrait Photography", "category": "Photography", "category_slug": "photography", "count": 19},
+    {"name": "Pottery & Clay Art", "category": "Art & Craft", "category_slug": "art-craft", "count": 16},
+    {"name": "Hatha Yoga", "category": "Fitness & Yoga", "category_slug": "fitness-yoga", "count": 31},
+    {"name": "Italian Cooking", "category": "Cooking", "category_slug": "cooking", "count": 14},
+    {"name": "Full Stack Web Development", "category": "Technology", "category_slug": "technology", "count": 25},
+    {"name": "Conversational French", "category": "Languages", "category_slug": "languages", "count": 18},
+    {"name": "Hindustani Classical Vocals", "category": "Music", "category_slug": "music", "count": 20},
+    {"name": "Kathak Dance", "category": "Dance", "category_slug": "dance", "count": 15},
+]
+
+
+def get_popular_skills(db: Session, limit: int = 10) -> ApiResponse:
+    """Get popular skills/tags across categories."""
+    # Query database for published listings grouped by title/category
+    listings = (
+        db.query(SkillListingModel)
+        .filter(SkillListingModel.status == "published")
+        .all()
+    )
+
+    result = []
+    seen = set()
+
+    for item in listings:
+        name = item.title.strip()
+        if name.lower() not in seen:
+            seen.add(name.lower())
+            cat = db.query(CategoryModel).filter(CategoryModel.id == item.category_id).first()
+            result.append({
+                "name": name,
+                "category": cat.name if cat else "General",
+                "category_slug": cat.slug if cat else "general",
+                "count": 1,
+            })
+
+    # Supplement with curated popular skills if fewer than limit
+    for cur in CURATED_POPULAR_SKILLS:
+        if cur["name"].lower() not in seen and len(result) < limit:
+            seen.add(cur["name"].lower())
+            result.append(cur)
+
+    data = [PopularSkillSchema(**r).model_dump(mode="json") for r in result[:limit]]
+    return ApiResponse(
+        status=status.HTTP_200_OK,
+        message="Popular skills fetched successfully",
+        data=data,
+    )
+
+
+def get_skill_suggestions(db: Session, query: Optional[str] = None, limit: int = 10) -> ApiResponse:
+    """Get autocomplete suggestions for skills and categories."""
+    suggestions = []
+    seen = set()
+
+    q_str = query.strip() if query else ""
+
+    # 1. Matching categories
+    cat_query = db.query(CategoryModel).filter(CategoryModel.is_active == True)  # noqa: E712
+    if q_str:
+        cat_query = cat_query.filter(CategoryModel.name.ilike(f"%{q_str}%"))
+    categories = cat_query.limit(limit).all()
+
+    for cat in categories:
+        key = ("category", cat.name.lower())
+        if key not in seen:
+            seen.add(key)
+            suggestions.append(
+                SkillSuggestionSchema(
+                    id=cat.id,
+                    name=cat.name,
+                    type="category",
+                    category_id=cat.id,
+                    category_slug=cat.slug,
+                    category_name=cat.name,
+                ).model_dump(mode="json")
+            )
+
+    # 2. Matching skill listings
+    skill_query = db.query(SkillListingModel).filter(SkillListingModel.status == "published")
+    if q_str:
+        skill_query = skill_query.filter(
+            or_(
+                SkillListingModel.title.ilike(f"%{q_str}%"),
+                SkillListingModel.description.ilike(f"%{q_str}%"),
+            )
+        )
+    skills = skill_query.limit(limit).all()
+
+    for skill in skills:
+        key = ("skill", skill.title.strip().lower())
+        if key not in seen and len(suggestions) < limit:
+            seen.add(key)
+            cat = db.query(CategoryModel).filter(CategoryModel.id == skill.category_id).first()
+            suggestions.append(
+                SkillSuggestionSchema(
+                    id=skill.id,
+                    name=skill.title.strip(),
+                    type="skill",
+                    category_id=skill.category_id,
+                    category_slug=cat.slug if cat else None,
+                    category_name=cat.name if cat else None,
+                ).model_dump(mode="json")
+            )
+
+    # 3. Curated defaults if suggestions are fewer than limit
+    if len(suggestions) < limit:
+        for cur in CURATED_POPULAR_SKILLS:
+            if (not q_str or q_str.lower() in cur["name"].lower()) and ("skill", cur["name"].lower()) not in seen:
+                seen.add(("skill", cur["name"].lower()))
+                suggestions.append(
+                    SkillSuggestionSchema(
+                        id=None,
+                        name=cur["name"],
+                        type="skill",
+                        category_slug=cur["category_slug"],
+                        category_name=cur["category"],
+                    ).model_dump(mode="json")
+                )
+                if len(suggestions) >= limit:
+                    break
+
+    return ApiResponse(
+        status=status.HTTP_200_OK,
+        message="Skill suggestions fetched successfully",
+        data=suggestions[:limit],
     )

@@ -6,8 +6,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    DB_CONNECTION: str
-    SECRET_KEY: str
+    DB_CONNECTION: str = "sqlite:///./findnseekh.db"
+    SECRET_KEY: str = "findnseekh-secret-key-development-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 

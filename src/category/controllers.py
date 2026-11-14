@@ -41,13 +41,16 @@ def get_category(db: Session, category_id: int) -> ApiResponse:
 def seed_categories(db: Session) -> None:
     """Seed initial categories if they don't exist."""
     initial_categories = [
-        ("Technology", "technology"),
-        ("Academic Tuition", "academic-tuition"),
         ("Music", "music"),
-        ("Design", "design"),
-        ("Fitness", "fitness"),
-        ("Languages", "languages"),
+        ("Dance", "dance"),
+        ("Photography", "photography"),
+        ("Art & Craft", "art-craft"),
+        ("Fitness & Yoga", "fitness-yoga"),
         ("Cooking", "cooking"),
+        ("Technology", "technology"),
+        ("Languages", "languages"),
+        ("Academic Tuition", "academic-tuition"),
+        ("Design", "design"),
         ("Professional Skills", "professional-skills"),
     ]
     for name, slug in initial_categories:

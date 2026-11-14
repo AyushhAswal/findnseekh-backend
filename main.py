@@ -32,6 +32,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from src.utils.etag import ETagMiddleware
+
+app.add_middleware(ETagMiddleware)
+
 
 # API v1 router prefix
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -53,12 +57,18 @@ from src.profile import routers as profile_routers
 from src.category import routers as category_routers
 from src.skills import routers as skills_routers
 from src.requests import routers as request_routers
+from src.teachers import routers as teacher_routers
+from src.locations import routers as location_routers
+from src.home import routers as home_routers
 
 api_v1_router.include_router(user_routers.user_routes)
 api_v1_router.include_router(profile_routers.profile_routes)
 api_v1_router.include_router(category_routers.category_routes)
 api_v1_router.include_router(skills_routers.skills_routes)
 api_v1_router.include_router(request_routers.request_routes)
+api_v1_router.include_router(teacher_routers.teachers_routes)
+api_v1_router.include_router(location_routers.locations_routes)
+api_v1_router.include_router(home_routers.home_routes)
 
 
 app.include_router(api_v1_router)
