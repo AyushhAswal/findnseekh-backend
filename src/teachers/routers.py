@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -26,14 +27,29 @@ def list_teachers(
     city: Optional[str] = Query(None),
     mode: Optional[str] = Query(None),
     min_exp: Optional[int] = Query(None),
+    min_price: Optional[Decimal] = Query(None),
+    max_price: Optional[Decimal] = Query(None),
+    min_rating: Optional[float] = Query(None),
     sort: Optional[str] = Query("recommended"),
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    """List teachers with filtering, search and pagination."""
+    """List teachers with filtering, search, sorting and pagination."""
     return controllers.list_teachers(
-        db, q, category, category_id, city, mode, min_exp, sort, page, page_size
+        db=db,
+        q=q,
+        category=category,
+        category_id=category_id,
+        city=city,
+        mode=mode,
+        min_exp=min_exp,
+        min_price=min_price,
+        max_price=max_price,
+        min_rating=min_rating,
+        sort=sort,
+        page=page,
+        page_size=page_size,
     )
 
 

@@ -1,6 +1,6 @@
 from decimal import Decimal
 from typing import List, Optional
-from sqlalchemy import or_
+from sqlalchemy import func, or_, and_
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
@@ -268,14 +268,31 @@ def list_teachers(
     city: Optional[str] = None,
     mode: Optional[str] = None,
     min_exp: Optional[int] = None,
+    min_price: Optional[Decimal] = None,
+    max_price: Optional[Decimal] = None,
+    min_rating: Optional[float] = None,
     sort: Optional[str] = "recommended",
     page: int = 1,
     page_size: int = 12,
 ) -> ApiResponse:
-    """List and filter teachers with pagination."""
+    """List and filter teachers with sorting and pagination."""
+    # Subquery to calculate minimum published listing price per teacher
+    min_price_subq = (
+        db.query(
+            SkillListingModel.teacher_id,
+            func.min(SkillListingModel.price_amount).label("min_listing_price"),
+        )
+        .filter(SkillListingModel.status == "published")
+        .group_by(SkillListingModel.teacher_id)
+        .subquery()
+    )
+
+    effective_price = func.coalesce(min_price_subq.c.min_listing_price, Decimal("500.00"))
+
     query = (
         db.query(TeacherProfileModel)
         .join(UserModel, UserModel.id == TeacherProfileModel.user_id)
+        .outerjoin(min_price_subq, min_price_subq.c.teacher_id == TeacherProfileModel.user_id)
         .filter(UserModel.is_active == True)  # noqa: E712
     )
 
@@ -304,6 +321,16 @@ def list_teachers(
     if min_exp is not None:
         query = query.filter(TeacherProfileModel.experience_years >= min_exp)
 
+    if min_price is not None:
+        query = query.filter(effective_price >= min_price)
+
+    if max_price is not None:
+        query = query.filter(effective_price <= max_price)
+
+    if min_rating is not None and min_rating > 4.9:
+        # Default unreviewed profile rating is 4.9
+        query = query.filter(False)
+
     target_category_id = category_id
     if target_category_id is None and category:
         cat = (
@@ -330,6 +357,18 @@ def list_teachers(
             )
         )
 
+    norm_sort = (sort or "recommended").strip().lower().replace("-", "_")
+    if norm_sort == "price_asc":
+        query = query.order_by(effective_price.asc(), TeacherProfileModel.experience_years.desc())
+    elif norm_sort == "price_desc":
+        query = query.order_by(effective_price.desc(), TeacherProfileModel.experience_years.desc())
+    elif norm_sort == "experience":
+        query = query.order_by(TeacherProfileModel.experience_years.desc(), effective_price.asc())
+    elif norm_sort == "rating":
+        query = query.order_by(TeacherProfileModel.is_verified.desc(), TeacherProfileModel.experience_years.desc())
+    else:  # recommended
+        query = query.order_by(TeacherProfileModel.is_verified.desc(), TeacherProfileModel.experience_years.desc())
+
     total_count = query.count()
     offset = (page - 1) * page_size
     profiles = query.offset(offset).limit(page_size).all()
@@ -340,15 +379,52 @@ def list_teachers(
     if total_count == 0:
         filtered_samples = []
         for s in SAMPLE_FEATURED_TEACHERS:
-            if q and q.lower() not in s["name"].lower() and q.lower() not in s["specialty"].lower():
-                continue
+            if q:
+                q_lower = q.strip().lower()
+                matches_q = (
+                    q_lower in s["name"].lower()
+                    or q_lower in s["specialty"].lower()
+                    or any(q_lower in sk.lower() for sk in s.get("skills", []))
+                )
+                if not matches_q:
+                    continue
             if city and city.lower() not in s["city"].lower():
                 continue
-            if min_exp and s["experience_years"] < min_exp:
+            if mode and mode != "all":
+                if s["teaching_mode"] != mode and s["teaching_mode"] != "both":
+                    continue
+            if min_exp is not None and s["experience_years"] < min_exp:
                 continue
-            filtered_samples.append(TeacherCardSchema(**s))
+            if min_price is not None and s["hourly_rate"] < min_price:
+                continue
+            if max_price is not None and s["hourly_rate"] > max_price:
+                continue
+            if min_rating is not None and s["rating"] < min_rating:
+                continue
+            if category:
+                cat_lower = category.lower()
+                matches_cat = (
+                    any(cat_lower in sk.lower() for sk in s.get("skills", []))
+                    or cat_lower in s["specialty"].lower()
+                )
+                if not matches_cat:
+                    continue
+            filtered_samples.append(s)
+
+        # Apply sorting to fallback samples
+        if norm_sort == "price_asc":
+            filtered_samples.sort(key=lambda x: x["hourly_rate"])
+        elif norm_sort == "price_desc":
+            filtered_samples.sort(key=lambda x: x["hourly_rate"], reverse=True)
+        elif norm_sort == "experience":
+            filtered_samples.sort(key=lambda x: x["experience_years"], reverse=True)
+        elif norm_sort == "rating":
+            filtered_samples.sort(key=lambda x: x["rating"], reverse=True)
+        else:  # recommended
+            filtered_samples.sort(key=lambda x: (x["is_verified"], x["rating"]), reverse=True)
+
         total_count = len(filtered_samples)
-        cards = filtered_samples[offset : offset + page_size]
+        cards = [TeacherCardSchema(**s) for s in filtered_samples[offset : offset + page_size]]
 
     data = TeacherPaginationSchema(
         total=total_count,

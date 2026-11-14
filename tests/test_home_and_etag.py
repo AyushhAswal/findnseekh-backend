@@ -121,3 +121,48 @@ def test_teachers_featured_and_listing(client, db):
     detail_data = res_detail.json()["data"]
     assert detail_data["user_id"] == teacher_id
 
+
+def test_teachers_sorting_and_price_filters(client, db):
+    """Test teacher sorting (price, experience, rating) and budget filtering."""
+    # 1. Test Price: Low to High (both kebab-case and snake_case)
+    res_asc = client.get("/api/v1/teachers?sort=price-asc")
+    assert res_asc.status_code == 200
+    teachers_asc = res_asc.json()["data"]["teachers"]
+    assert len(teachers_asc) >= 2
+    for i in range(len(teachers_asc) - 1):
+        assert float(teachers_asc[i]["hourly_rate"]) <= float(teachers_asc[i + 1]["hourly_rate"])
+
+    res_asc2 = client.get("/api/v1/teachers?sort=price_asc")
+    assert res_asc2.status_code == 200
+    teachers_asc2 = res_asc2.json()["data"]["teachers"]
+    assert float(teachers_asc2[0]["hourly_rate"]) <= float(teachers_asc2[-1]["hourly_rate"])
+
+    # 2. Test Price: High to Low
+    res_desc = client.get("/api/v1/teachers?sort=price-desc")
+    assert res_desc.status_code == 200
+    teachers_desc = res_desc.json()["data"]["teachers"]
+    assert float(teachers_desc[0]["hourly_rate"]) >= float(teachers_desc[-1]["hourly_rate"])
+
+    # 3. Test Experience sorting
+    res_exp = client.get("/api/v1/teachers?sort=experience")
+    assert res_exp.status_code == 200
+    teachers_exp = res_exp.json()["data"]["teachers"]
+    assert teachers_exp[0]["experience_years"] >= teachers_exp[-1]["experience_years"]
+
+    # 4. Test Price filtering (min_price and max_price)
+    res_price_filter = client.get("/api/v1/teachers?min_price=600&max_price=800")
+    assert res_price_filter.status_code == 200
+    filtered_teachers = res_price_filter.json()["data"]["teachers"]
+    assert len(filtered_teachers) > 0
+    for t in filtered_teachers:
+        rate = float(t["hourly_rate"])
+        assert 600 <= rate <= 800
+
+    # 5. Test Rating filtering
+    res_rating = client.get("/api/v1/teachers?min_rating=4.8")
+    assert res_rating.status_code == 200
+    rating_teachers = res_rating.json()["data"]["teachers"]
+    for t in rating_teachers:
+        assert float(t["rating"]) >= 4.8
+
+
