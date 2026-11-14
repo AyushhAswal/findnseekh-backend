@@ -11,6 +11,7 @@ from src.users.dtos import (
     UserWithRolesSchema,
 )
 from src.users.models import UserModel
+from src.profile.models import StudentProfileModel
 from src.roles.models import RoleModel, UserRoleModel
 from src.utils.auth import create_access_token, hash_password, require_active_session, revoke_token, verify_password
 from src.utils.responses import ApiResponse
@@ -44,6 +45,10 @@ def register_user(db: Session, body: UserRegisterSchema) -> ApiResponse:
 
     user_role = UserRoleModel(user_id=user.id, role_id=student_role.id)
     db.add(user_role)
+
+    # Create default student profile
+    student_profile = StudentProfileModel(user_id=user.id, skills_to_learn=[])
+    db.add(student_profile)
 
     try:
         db.commit()

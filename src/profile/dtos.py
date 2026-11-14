@@ -81,3 +81,53 @@ class TeacherPublicProfileSchema(BaseModel):
     is_verified: bool
 
     model_config = {"from_attributes": True}
+
+
+class StudentProfileUpdateSchema(BaseModel):
+    """Validation schema for updating student profile."""
+
+    phone: Optional[str] = Field(default=None, max_length=20)
+    city: Optional[str] = Field(default=None, max_length=100)
+    state: Optional[str] = Field(default=None, max_length=100)
+    learning_mode: Optional[str] = Field(default=None)
+    learning_level: Optional[str] = Field(default=None)
+    learning_goals: Optional[str] = Field(default=None, max_length=1000)
+    skills_to_learn: Optional[list[str]] = Field(default=None)
+
+    @field_validator("learning_mode")
+    @classmethod
+    def _validate_learning_mode(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        allowed = {"online", "offline", "both"}
+        if v not in allowed:
+            raise ValueError(f"learning_mode must be one of {allowed}")
+        return v
+
+    @field_validator("learning_level")
+    @classmethod
+    def _validate_learning_level(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        allowed = {"beginner", "intermediate", "advanced"}
+        if v not in allowed:
+            raise ValueError(f"learning_level must be one of {allowed}")
+        return v
+
+
+class StudentProfileReadSchema(BaseModel):
+    """Output serialization schema for student profile."""
+
+    id: int
+    user_id: int
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    learning_mode: str
+    learning_level: str
+    learning_goals: Optional[str] = None
+    skills_to_learn: Optional[list[str]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}

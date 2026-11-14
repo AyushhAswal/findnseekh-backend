@@ -96,3 +96,73 @@ class TestTeacherProfile:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class TestStudentProfile:
+    """Student profile tests."""
+
+    def _register_and_login(self, client: TestClient, email: str) -> str:
+        client.post(
+            "/api/v1/users/register",
+            json={"name": "Student One", "email": email, "password": "secret1234"},
+        )
+        resp = client.post(
+            "/api/v1/users/login",
+            json={"email": email, "password": "secret1234"},
+        )
+        return resp.json()["data"]["access_token"]
+
+    def test_get_my_student_profile(self, client: TestClient):
+        token = self._register_and_login(client, "student1@example.com")
+        resp = client.get(
+            "/api/v1/profile/student/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()["data"]
+        assert data["learning_mode"] == "both"
+        assert data["learning_level"] == "beginner"
+        assert data["skills_to_learn"] == []
+
+    def test_update_my_student_profile(self, client: TestClient):
+        token = self._register_and_login(client, "student2@example.com")
+        resp = client.put(
+            "/api/v1/profile/student/me",
+            json={
+                "phone": "+91 9876543210",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "learning_mode": "online",
+                "learning_level": "intermediate",
+                "learning_goals": "Want to learn acoustic guitar fingerstyle",
+                "skills_to_learn": ["Guitar", "Music Theory"],
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()["data"]
+        assert data["phone"] == "+91 9876543210"
+        assert data["city"] == "Bengaluru"
+        assert data["state"] == "Karnataka"
+        assert data["learning_mode"] == "online"
+        assert data["learning_level"] == "intermediate"
+        assert data["learning_goals"] == "Want to learn acoustic guitar fingerstyle"
+        assert data["skills_to_learn"] == ["Guitar", "Music Theory"]
+
+    def test_invalid_learning_mode(self, client: TestClient):
+        token = self._register_and_login(client, "student3@example.com")
+        resp = client.put(
+            "/api/v1/profile/student/me",
+            json={"learning_mode": "invalid"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, 422)
+
+    def test_invalid_learning_level(self, client: TestClient):
+        token = self._register_and_login(client, "student4@example.com")
+        resp = client.put(
+            "/api/v1/profile/student/me",
+            json={"learning_level": "grandmaster"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, 422)

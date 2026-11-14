@@ -32,6 +32,7 @@ class UserModel(Base):
     # Relationships
     user_roles = relationship("UserRoleModel", back_populates="user", cascade="all, delete-orphan")
     teacher_profile = relationship("TeacherProfileModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    student_profile = relationship("StudentProfileModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
     skill_listings = relationship("SkillListingModel", back_populates="teacher", cascade="all, delete-orphan")
     learning_requests_as_student = relationship("LearningRequestModel", foreign_keys="LearningRequestModel.student_id", back_populates="student")
     learning_requests_as_teacher = relationship("LearningRequestModel", foreign_keys="LearningRequestModel.teacher_id", back_populates="teacher")
