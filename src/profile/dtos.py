@@ -14,6 +14,7 @@ class TeacherProfileCreateSchema(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     state: Optional[str] = Field(default=None, max_length=100)
     teaching_mode: str = Field(default="both")
+    phone: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("teaching_mode")
     @classmethod
@@ -34,6 +35,7 @@ class TeacherProfileUpdateSchema(BaseModel):
     city: Optional[str] = Field(default=None, max_length=100)
     state: Optional[str] = Field(default=None, max_length=100)
     teaching_mode: Optional[str] = Field(default=None)
+    phone: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("teaching_mode")
     @classmethod
@@ -51,6 +53,7 @@ class TeacherProfileReadSchema(BaseModel):
 
     id: int
     user_id: int
+    phone: Optional[str] = None
     bio: Optional[str] = None
     qualification: Optional[str] = None
     skills: Optional[list[str]] = None

@@ -42,6 +42,7 @@ class TestTeacherProfile:
         resp = client.put(
             "/api/v1/profile/teacher/me",
             json={
+                "phone": "+91 9123456789",
                 "bio": "Experienced Python tutor",
                 "qualification": "M.Sc. Computer Science",
                 "skills": ["Python", "Machine Learning", "Mathematics"],
@@ -53,12 +54,21 @@ class TestTeacherProfile:
         )
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()["data"]
+        assert data["phone"] == "+91 9123456789"
         assert data["bio"] == "Experienced Python tutor"
         assert data["qualification"] == "M.Sc. Computer Science"
         assert data["skills"] == ["Python", "Machine Learning", "Mathematics"]
         assert data["experience_years"] == 5
         assert data["city"] == "Bangalore"
         assert data["teaching_mode"] == "online"
+
+        # Verify GET /profile/teacher/me also returns the synced phone
+        get_resp = client.get(
+            "/api/v1/profile/teacher/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert get_resp.status_code == status.HTTP_200_OK
+        assert get_resp.json()["data"]["phone"] == "+91 9123456789"
 
     def test_get_public_profile(self, client: TestClient):
         token = self._register_and_login(client, "tp3@example.com")

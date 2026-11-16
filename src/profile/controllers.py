@@ -48,6 +48,13 @@ def create_teacher_profile(db: Session, token: str, body: TeacherProfileCreateSc
 
     _check_teacher_role(db, user_id)
 
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
     # Check if profile already exists
     existing = (
         db.query(TeacherProfileModel)
@@ -59,6 +66,9 @@ def create_teacher_profile(db: Session, token: str, body: TeacherProfileCreateSc
             status_code=status.HTTP_409_CONFLICT,
             detail="Teacher profile already exists. Use PUT to update.",
         )
+
+    if body.phone is not None:
+        user.phone = body.phone
 
     profile = TeacherProfileModel(
         user_id=user_id,
@@ -73,11 +83,15 @@ def create_teacher_profile(db: Session, token: str, body: TeacherProfileCreateSc
     db.add(profile)
     db.commit()
     db.refresh(profile)
+    db.refresh(user)
+
+    dto = TeacherProfileReadSchema.model_validate(profile)
+    dto.phone = user.phone
 
     return ApiResponse(
         status=status.HTTP_201_CREATED,
         message="Teacher profile created successfully",
-        data=TeacherProfileReadSchema.model_validate(profile).model_dump(mode="json"),
+        data=dto.model_dump(mode="json"),
     )
 
 
@@ -93,21 +107,31 @@ def get_my_teacher_profile(db: Session, token: str) -> ApiResponse:
 
     _check_teacher_role(db, user_id)
 
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
     profile = (
         db.query(TeacherProfileModel)
         .filter(TeacherProfileModel.user_id == user_id)
         .first()
     )
     if profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher profile not found",
-        )
+        profile = TeacherProfileModel(user_id=user_id, skills=[], teaching_mode="both")
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+    dto = TeacherProfileReadSchema.model_validate(profile)
+    dto.phone = user.phone
 
     return ApiResponse(
         status=status.HTTP_200_OK,
         message="Teacher profile fetched successfully",
-        data=TeacherProfileReadSchema.model_validate(profile).model_dump(mode="json"),
+        data=dto.model_dump(mode="json"),
     )
 
 
@@ -123,29 +147,43 @@ def update_my_teacher_profile(db: Session, token: str, body: TeacherProfileUpdat
 
     _check_teacher_role(db, user_id)
 
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
     profile = (
         db.query(TeacherProfileModel)
         .filter(TeacherProfileModel.user_id == user_id)
         .first()
     )
     if profile is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Teacher profile not found",
-        )
+        profile = TeacherProfileModel(user_id=user_id, skills=[], teaching_mode="both")
+        db.add(profile)
+        db.flush()
 
     update_data = body.model_dump(exclude_unset=True)
+    if "phone" in update_data:
+        phone_val = update_data.pop("phone")
+        user.phone = phone_val
+
     for key, value in update_data.items():
         if value is not None:
             setattr(profile, key, value)
 
     db.commit()
     db.refresh(profile)
+    db.refresh(user)
+
+    dto = TeacherProfileReadSchema.model_validate(profile)
+    dto.phone = user.phone
 
     return ApiResponse(
         status=status.HTTP_200_OK,
         message="Teacher profile updated successfully",
-        data=TeacherProfileReadSchema.model_validate(profile).model_dump(mode="json"),
+        data=dto.model_dump(mode="json"),
     )
 
 
