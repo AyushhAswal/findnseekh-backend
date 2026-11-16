@@ -166,3 +166,67 @@ def test_teachers_sorting_and_price_filters(client, db):
         assert float(t["rating"]) >= 4.8
 
 
+def test_teacher_rich_detail(client, db):
+    """Test GET /api/v1/teachers/{user_id} rich fields."""
+    seed_categories(db)
+    res = client.get("/api/v1/teachers/101")
+    assert res.status_code == 200
+    data = res.json()["data"]
+
+    # Verify rich profile fields required by teacher-profile-page
+    assert data["user_id"] == 101
+    assert data["name"] == "Rohan Mehta"
+    assert data["category"] == "Music"
+    assert data["category_id"] == "music"
+    assert "about" in data and len(data["about"]) > 10
+    assert "languages" in data and len(data["languages"]) >= 1
+    assert "qualifications" in data and len(data["qualifications"]) >= 1
+    assert "reviews" in data and len(data["reviews"]) >= 1
+    assert "faqs" in data and len(data["faqs"]) >= 1
+    assert "listings" in data and len(data["listings"]) >= 1
+
+
+def test_teacher_send_enquiry(client, db):
+    """Test POST /api/v1/teachers/{user_id}/enquiry."""
+    seed_categories(db)
+
+    # 1. Guest enquiry to sample teacher
+    enquiry_payload = {
+        "teaching_mode": "online",
+        "preferred_date": "2026-11-20",
+        "message": "Hi, I would like to schedule a beginner guitar class.",
+    }
+    res_guest = client.post("/api/v1/teachers/101/enquiry", json=enquiry_payload)
+    assert res_guest.status_code == 201
+    guest_data = res_guest.json()["data"]
+    assert guest_data["teacher_id"] == 101
+    assert guest_data["teaching_mode"] == "online"
+    assert guest_data["status"] == "pending"
+
+    # 2. Authenticated student enquiry
+    client.post(
+        "/api/v1/users/register",
+        json={"name": "Enquiry Student", "email": "enq.student@example.com", "password": "password123"},
+    )
+    login_res = client.post(
+        "/api/v1/users/login",
+        json={"email": "enq.student@example.com", "password": "password123"},
+    )
+    token = login_res.json()["data"]["access_token"]
+
+    res_auth = client.post(
+        "/api/v1/teachers/101/enquiry",
+        json={"teaching_mode": "offline", "preferred_date": "2026-11-25", "message": "In-person inquiry"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res_auth.status_code == 201
+    auth_data = res_auth.json()["data"]
+    assert auth_data["teacher_id"] == 101
+    assert auth_data["student_id"] is not None
+
+    # 3. Enquiry to non-existent teacher -> 404
+    res_404 = client.post("/api/v1/teachers/99999/enquiry", json=enquiry_payload)
+    assert res_404.status_code == 404
+
+
+

@@ -1,11 +1,15 @@
 from decimal import Decimal
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.security import HTTPBearer
+from fastapi.security.http import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from src.teachers import controllers
+from src.teachers.dtos import TeacherEnquiryCreateSchema
 from src.utils.db import get_db
 
+security = HTTPBearer(auto_error=False)
 teachers_routes = APIRouter(prefix="/teachers", tags=["Teachers"])
 
 
@@ -60,4 +64,17 @@ def get_teacher_detail(
 ):
     """Get public teacher detail by user ID."""
     return controllers.get_teacher_detail(db, user_id)
+
+
+@teachers_routes.post("/{user_id}/enquiry", status_code=status.HTTP_201_CREATED)
+def send_teacher_enquiry(
+    user_id: int,
+    body: TeacherEnquiryCreateSchema,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Send an enquiry or lesson request to a teacher."""
+    token = credentials.credentials if credentials else None
+    return controllers.send_teacher_enquiry(db, user_id, body, token)
+
 
